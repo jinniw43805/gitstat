@@ -3,8 +3,10 @@ from subprocess import PIPE, Popen
 import sys
 import numpy as np
 targetFolder = "cd ../commons-math/;"
+totalFilesCmd = "find ./ -type f | wc -l"
 authors = []
 totalCommits = 0
+totalFilesCount = 0
 def cmdline(command):
     # Init for cmdline operation
     process = Popen(
@@ -13,7 +15,10 @@ def cmdline(command):
             shell = True
             )
     return process.communicate()[0]
-
+def getTotalFiles():
+    global totalFilesCount
+    cmd = targetFolder + 'find ./ -type f | wc -l'
+    totalFilesCount = int(cmdline(cmd)[4:-1])
 def targetIsGit():
     """Return true if targer folder is git folder, other wise return false"""
     cmd = targetFolder + 'git rev-parse --is-inside-work-tree'
@@ -35,14 +40,14 @@ def getAllBranchesName():
     branch = ''.join(branchesName).split('\n  ')
     return branch
 
+def find_between( s, first, last ):
+    try:
+        start = s.index( first ) + len( first )
+        end = s.index( last, start )
+        return s[start:end]
+    except ValueError:
+        return ""
 def getAuthors():
-    def find_between( s, first, last ):
-        try:
-            start = s.index( first ) + len( first )
-            end = s.index( last, start )
-            return s[start:end]
-        except ValueError:
-            return ""
     def getCommitName():
         cmd = targetFolder + 'git log --branches --pretty=format:"%H %aN"'
         commits = []
@@ -89,7 +94,9 @@ def getAuthors():
                 "commit":[],
                 "stat":{
                     "commitCount":0,
-                    "commitPercent":0
+                    "commitPercent":0,
+                    "changedFilesCount":0,
+                    "changedFilesPercent":0
                     }
         }
         authors.append(newAuthorObj)
@@ -108,36 +115,76 @@ def getAuthors():
                 # print "Can not append"
     return authors
 def getChangedFilesByAuthors():
-    cmd = targetFolder + 'git log --branches --name-only'
+    def storeFilesInAuthors(commitName, FileName):
+        global authors
+        for author in authors:
+            # print author['author']
+            for commit in author['commit']:
+                # print commit
+                # print commitName
+                if commit == commitName:
+                    # print "can add files"
+                    author['changedFiles'].append(FileName)
+
+        for author in authors:
+            author['changedFiles'] = list(set(author['changedFiles']))
+            
+    cmd = targetFolder + 'git log --branches --name-only --pretty=short'
     commits = []
     for char in cmdline(cmd):
         commits.append(char)
     commits = ''.join(commits).split('commit ')
-    # print commits[-1]
+    for commit in commits:
+        try:
+            if commit.split('\n')[-2] == '' and commit.split('\n')[-1] == '':
+                # print commit.split('\n')
+                # print "Extract files from commit"
+                count = 2
+                commitName = list(reversed(commit.split('\n')))[-1]
+                # print list(reversed(commit.split('\n')))
+                while list(reversed(commit.split('\n')))[count] != '' and list(reversed(commit.split('\n')))[count][0] != ' ':
+                    # print list(reversed(commit.split('\n')))[count]
+                    storeFilesInAuthors(list(reversed(commit.split('\n')))[-1], list(reversed(commit.split('\n')))[count])
+
+                    count = count + 1
+            # else:
+                # print commit.split('\n')[-2]
+        except IndexError:
+            print len(commit.split('\n'))
+    
 def getStatForAuthors():
     # print authors
     global totalCommits
+    global totalFilesCount
     # print "hey"
     for author in authors:
         author['stat']['commitCount'] = len(author['commit'])
         # author['stat']['commitPercent'] = (1/totalCommits)
         author['stat']['commitPercent'] = (author['stat']['commitCount']/totalCommits)
+        author['stat']['changedFilesCount'] = len(author['changedFiles'])
+        author['stat']['changedFilesPercent'] = author['stat']['changedFilesCount']/totalFilesCount
+
+
     # print authors
 def printStat():
     global authors
     for author in authors:
+        print "Author"
         print author['author']
         print author['stat']
-
+        print author['changedFiles']
 def main():
     
     targetIsGit()
-    # getAllBranchesName()
+    getTotalFiles()
+
+
     getAuthors()
     authors = getChangedFilesByAuthors()
     getStatForAuthors()
     
-    # print authors
+    # # print authors
     printStat()
+    # print totalFilesCount
 # This module is being run standalone.
 if __name__ == "__main__": main()
