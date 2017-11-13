@@ -49,7 +49,7 @@ def find_between( s, first, last ):
         return ""
 def getAuthors():
     def getCommitName():
-        cmd = targetFolder + 'git log --branches --pretty=format:"%H %aN"'
+        cmd = targetFolder + 'git log --branches --pretty=format:"%H %aN" --before="2017-11-01"'
         commits = []
         info = []
         for char in cmdline(cmd):
@@ -69,7 +69,7 @@ def getAuthors():
     # getCommitName()
     authorNames = []
     commitNames = []
-    cmd = targetFolder + 'git log --branches --name-only'
+    cmd = targetFolder + 'git log --branches --name-only --before="2017-11-1"'
     commits = []
     for char in cmdline(cmd):
         commits.append(char)
@@ -91,6 +91,7 @@ def getAuthors():
         newAuthorObj = {
                 "author":newAuthorName,
                 "changedFiles":[],
+                "changedFilesCountByCommit":[],
                 "commit":[],
                 "stat":{
                     "commitCount":0,
@@ -126,10 +127,16 @@ def getChangedFilesByAuthors():
                     # print "can add files"
                     author['changedFiles'].append(FileName)
 
+        # for author in authors:
+            # author['changedFiles'] = list(set(author['changedFiles']))
+    
+    def storeFilesCountByEachCommitInAuthors(commitName, count):
+        global authors
         for author in authors:
-            author['changedFiles'] = list(set(author['changedFiles']))
-            
-    cmd = targetFolder + 'git log --branches --name-only --pretty=short'
+            for commit in author['commit']:
+                if commit == commitName:
+                    author['changedFilesCountByCommit'].append(count)
+    cmd = targetFolder + 'git log --branches --name-only --pretty=short --before="2017-11-01"'
     commits = []
     for char in cmdline(cmd):
         commits.append(char)
@@ -140,13 +147,16 @@ def getChangedFilesByAuthors():
                 # print commit.split('\n')
                 # print "Extract files from commit"
                 count = 2
+                changedFilesCount = 0
                 commitName = list(reversed(commit.split('\n')))[-1]
                 # print list(reversed(commit.split('\n')))
                 while list(reversed(commit.split('\n')))[count] != '' and list(reversed(commit.split('\n')))[count][0] != ' ':
+                    
                     # print list(reversed(commit.split('\n')))[count]
                     storeFilesInAuthors(list(reversed(commit.split('\n')))[-1], list(reversed(commit.split('\n')))[count])
-
+                    changedFilesCount = changedFilesCount + 1
                     count = count + 1
+                storeFilesCountByEachCommitInAuthors(list(reversed(commit.split('\n')))[-1], changedFilesCount)
             # else:
                 # print commit.split('\n')[-2]
         except IndexError:
@@ -173,6 +183,7 @@ def printStat():
         print author['author']
         print author['stat']
         print author['changedFiles']
+        print author['changedFilesCountByCommit']
 def main():
     
     targetIsGit()
