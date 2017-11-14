@@ -5,12 +5,29 @@ import numpy as np
 from numpy import median
 import time as sysTime
 import datetime
+import csv
 targetFolder = "cd ~/git/CR-group-1/commons-math/;"
 totalFilesCmd = "find ./ -type f | wc -l"
 authors = []
 authorsInactive = []
 totalCommits = 0
 totalFilesCount = 0
+def writeTocsv():
+    with open('result.csv', 'wb') as csvfile:
+        csvwriter = csv.writer(csvfile, dialect='excel')
+        csvwriter.writerow(['Author', '', 'commit', '', 'FileChage'])
+        csvwriter.writerow(['', '#', '%', '#', '%', 'Avg.' ,'Med.'])
+        for author in authors:
+            length = len(author['author'])
+            # csvwriter.set_column(csvwriter.writerow().index,1,len)
+            csvwriter.writerow([author['author'], 
+                author['stat']['commitCount'],
+                author['stat']['commitPercent'],
+                author['stat']['changedFilesCount'],
+                author['stat']['changedFilesPercent'],
+                author['stat']['changedFilesAvg'],
+                author['stat']['changedFilesMed']
+                ])
 def cmdline(command):
     # Init for cmdline operation
     process = Popen(
@@ -365,6 +382,7 @@ def main():
     getStatForAuthors()
     # # print authors
     printStat()
+    writeTocsv()
     # print totalFilesCount
 # This module is being run standalone.
 if __name__ == "__main__": main()
