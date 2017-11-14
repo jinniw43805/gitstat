@@ -96,6 +96,7 @@ def getAuthors():
                 "author":newAuthorName,
                 "changedFiles":[],
                 "changedFilesCountByCommit":[],
+                "changedFilesTypeCountByCommit":[],
                 "commit":[],
                 "stat":{
                     "commitCount":0,
@@ -105,7 +106,16 @@ def getAuthors():
                     "changedFilesAvg":0,
                     "changedFilesMed":0,
                     "latestCommitTime":"",
-                    "latestCommitTimeStamp":""
+                    "latestCommitTimeStamp":"",
+                    "M":0,
+                    "D":0,
+                    "A":0,
+                    "Mavg":0,
+                    "Davg":0,
+                    "Aavg":0,
+                    "Mmed":0,
+                    "Dmed":0,
+                    "Amed":0
                     }
         }
         authors.append(newAuthorObj)
@@ -171,24 +181,6 @@ def getChangedFilesByAuthors():
         except IndexError:
             print len(commit.split('\n'))
     
-def getStatForAuthors():
-    # print authors
-    global totalCommits
-    global totalFilesCount
-    # print "hey"
-    for author in authors:
-        try:
-            author['stat']['commitCount'] = len(author['commit'])
-            # author['stat']['commitPercent'] = (1/totalCommits)
-            author['stat']['commitPercent'] = (author['stat']['commitCount']/totalCommits)
-            author['stat']['changedFilesCount'] = len(author['changedFiles'])
-            author['stat']['changedFilesPercent'] = author['stat']['changedFilesCount']/totalFilesCount
-            author['stat']['changedFilesMed'] = median(author['changedFilesCountByCommit'])
-            author['stat']['changedFilesAvg'] = author['stat']['changedFilesCount'] / author['stat']['commitCount']
-        except ZeroDivisionError:
-            print "error"
-
-    # print authors
 def getInactiveAuthorsForSixMonths():
     def updateAuthorLatestTime(updateAuthor, updateTime):
         global authors
@@ -222,9 +214,113 @@ def getInactiveAuthorsForSixMonths():
                 # print commit
         except IndexError:
             print "time is error"
-            # print commit
-        # print time[0]
-        # print find_between( commit, 'Date: ',':' )[]
+def getChangedFilesTypeByAuthor():
+    def isFilesLine(line):
+        if (line[0] == "D" or line[0] == "M" or line[0]== "A") and line[1] == "\t":
+            # print line
+            return True
+        else:
+            return False
+    def FileType(line):
+        return line[0]
+        
+        # return True
+    def storeFilesTypesOfEachCommitInAuthors(authorName, typeObj):
+        global authors
+        for author in authors:
+            if author['author'] == authorName:
+                author['changedFilesTypeCountByCommit'].append(typeObj)
+        # return True
+    def storeFilesTypesOfEachCommitInTypeObj(typeObj, fileType):
+        if fileType == "M":
+            typeObj['commit']['M'] = typeObj['commit']['M'] + 1
+        elif fileType == "D":
+            typeObj['commit']['D'] = typeObj['commit']['D'] + 1
+        elif fileType == "A":
+            typeObj['commit']['A'] = typeObj['commit']['A'] + 1
+        else:
+            print "FileType is error"
+        return typeObj
+        # return True
+    
+    cmd = targetFolder + 'git log --before="2017-11-01" --name-status --reverse --date=iso' 
+    commits = []
+    for char in cmdline(cmd):
+        commits.append(char)
+    commits = ''.join(commits).split('commit ')
+    for commit in commits:
+        # get author name
+        authorName = find_between( commit, 'Author:', ' <' )[1:]
+        # print authorName
+        typeObj = {
+                "author":authorName,
+                "commit":{
+                    "M":0,
+                    "D":0,
+                    "A":0
+                    }
+                }
+        for eachLine in commit.split('\n'):
+            try:
+                # print isFilesLine(eachLine)
+                
+                if isFilesLine(eachLine) == True:
+                    # print eachLine
+                    fileType = FileType(eachLine)
+                    # print fileType
+                    typeObj =storeFilesTypesOfEachCommitInTypeObj(typeObj, fileType)
+                    # print "e"
+
+            except IndexError:
+                # ChangeLineSymbol
+                eachLine
+                # print eachLine
+        storeFilesTypesOfEachCommitInAuthors(authorName, typeObj)
+        # print typeObj
+def getStatForAuthors():
+    def getStatM(author):
+        mCount = 0
+        medArray = []
+        for eachCommit in author['changedFilesTypeCountByCommit']:
+            mCount = mCount + int(eachCommit['commit']['M'])
+            medArray.append(int(eachCommit['commit']['M']))
+        author['stat']['M'] = mCount
+        medArray.sort()
+        author['stat']['Mmed'] = median(medArray)
+        
+        return author
+
+    # def getStatA(author):
+        # return null
+    # def getStatD(author):
+        # return null
+    
+    # print authors
+    global totalCommits
+    global totalFilesCount
+    # print "hey"
+    for author in authors:
+        try:
+            author['stat']['commitCount'] = len(author['commit'])
+            # author['stat']['commitPercent'] = (1/totalCommits)
+            author['stat']['commitPercent'] = (author['stat']['commitCount']/totalCommits)
+            author['stat']['changedFilesCount'] = len(author['changedFiles'])
+            author['stat']['changedFilesPercent'] = author['stat']['changedFilesCount']/totalFilesCount
+            author['stat']['changedFilesMed'] = median(author['changedFilesCountByCommit'])
+            author['stat']['changedFilesAvg'] = author['stat']['changedFilesCount'] / author['stat']['commitCount']
+
+            author = getStatM(author)
+
+            #1 getStatA
+            #2 getStatD
+
+            author['stat']['Mavg'] = author['stat']['M'] / author['stat']['commitCount']
+            #3 author['stat']['Davg'] = author['stat']['D'] / author['stat']['commitCount']
+            #4 author['stat']['Aavg'] = author['stat']['A'] / author['stat']['commitCount']
+        except ZeroDivisionError:
+            print "error"
+
+    # print authors
 def printStat():
     global authors
     for author in authors:
@@ -232,7 +328,9 @@ def printStat():
         print author['author']
         print author['stat']
         # print author['changedFiles']
-        print author['changedFilesCountByCommit']
+        # print author['changedFilesCountByCommit']
+        print author['changedFilesTypeCountByCommit']
+        print author['stat']['Mmed']
 def main():
     
     targetIsGit()
@@ -241,9 +339,12 @@ def main():
 
     getAuthors()
     getChangedFilesByAuthors()
-    getStatForAuthors()
     
     getInactiveAuthorsForSixMonths()
+    getChangedFilesTypeByAuthor()
+    
+    
+    getStatForAuthors()
     # # print authors
     printStat()
     # print totalFilesCount
