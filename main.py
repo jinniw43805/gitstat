@@ -5,7 +5,7 @@ import numpy as np
 from numpy import median
 import time as sysTime
 import datetime
-targetFolder = "cd ../commons-math/;"
+targetFolder = "cd ~/git/CR-group-1/commons-math/;"
 totalFilesCmd = "find ./ -type f | wc -l"
 authors = []
 authorsInactive = []
@@ -290,10 +290,28 @@ def getStatForAuthors():
         
         return author
 
-    # def getStatA(author):
-        # return null
-    # def getStatD(author):
-        # return null
+    def getStatA(author):
+        mCount = 0
+        medArray = []
+        for eachCommit in author['changedFilesTypeCountByCommit']:
+            mCount = mCount + int(eachCommit['commit']['A'])
+            medArray.append(int(eachCommit['commit']['A']))
+        author['stat']['A'] = mCount
+        medArray.sort()
+        author['stat']['Amed'] = median(medArray)
+
+        return author
+    def getStatD(author):
+        mCount = 0
+        medArray = []
+        for eachCommit in author['changedFilesTypeCountByCommit']:
+            mCount = mCount + int(eachCommit['commit']['D'])
+            medArray.append(int(eachCommit['commit']['D']))
+        author['stat']['D'] = mCount
+        medArray.sort()
+        author['stat']['Dmed'] = median(medArray)
+
+        return author
     
     # print authors
     global totalCommits
@@ -310,13 +328,11 @@ def getStatForAuthors():
             author['stat']['changedFilesAvg'] = author['stat']['changedFilesCount'] / author['stat']['commitCount']
 
             author = getStatM(author)
-
-            #1 getStatA
-            #2 getStatD
-
+            author = getStatD(author)
+            author = getStatA(author)
             author['stat']['Mavg'] = author['stat']['M'] / author['stat']['commitCount']
-            #3 author['stat']['Davg'] = author['stat']['D'] / author['stat']['commitCount']
-            #4 author['stat']['Aavg'] = author['stat']['A'] / author['stat']['commitCount']
+            author['stat']['Davg'] = author['stat']['D'] / author['stat']['commitCount']
+            author['stat']['Aavg'] = author['stat']['A'] / author['stat']['commitCount']
         except ZeroDivisionError:
             print "error"
 
@@ -330,7 +346,9 @@ def printStat():
         # print author['changedFiles']
         # print author['changedFilesCountByCommit']
         print author['changedFilesTypeCountByCommit']
-        print author['stat']['Mmed']
+        # print author['stat']['Mmed']
+        # print author['stat']['Amed']
+        # print author['stat']['Dmed']
 def main():
     
     targetIsGit()
