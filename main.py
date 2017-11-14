@@ -5,12 +5,29 @@ import numpy as np
 from numpy import median
 import time as sysTime
 import datetime
+import csv
 targetFolder = "cd ~/git/CR-group-1/commons-math/;"
 totalFilesCmd = "find ./ -type f | wc -l"
 authors = []
 authorsInactive = []
 totalCommits = 0
 totalFilesCount = 0
+def writeTocsv():
+    with open('result.csv', 'wb') as csvfile:
+        csvwriter = csv.writer(csvfile, dialect='excel')
+        csvwriter.writerow(['Author', '', 'commit', '', 'FileChage'])
+        csvwriter.writerow(['', '#', '%', '#', '%', 'Avg.' ,'Med.'])
+        for author in authors:
+            length = len(author['author'])
+            # csvwriter.set_column(csvwriter.writerow().index,1,len)
+            csvwriter.writerow([author['author'], 
+                author['stat']['commitCount'],
+                author['stat']['commitPercent'],
+                author['stat']['changedFilesCount'],
+                author['stat']['changedFilesPercent'],
+                author['stat']['changedFilesAvg'],
+                author['stat']['changedFilesMed']
+                ])
 def cmdline(command):
     # Init for cmdline operation
     process = Popen(
@@ -19,10 +36,10 @@ def cmdline(command):
             shell = True
             )
     return process.communicate()[0]
-def getTotalFiles():
-    global totalFilesCount
-    cmd = targetFolder + 'find ./ -type f | wc -l'
-    totalFilesCount = int(cmdline(cmd)[4:-1])
+# def getTotalFiles():
+#     global totalFilesCount
+#     cmd = targetFolder + 'find ./ -type f | wc -l'
+#     totalFilesCount = int(cmdline(cmd)[4:-1])
 def targetIsGit():
     """Return true if targer folder is git folder, other wise return false"""
     cmd = targetFolder + 'git rev-parse --is-inside-work-tree'
@@ -190,7 +207,7 @@ def getInactiveAuthorsForSixMonths():
                 author['stat']['latestCommitTimeStamp'] = sysTime.mktime(datetime.datetime.strptime(updateTime, "%Y-%m-%d").timetuple())
                 
     def getTimeStamp():
-        return null
+        return null 
     def getInactiveSinceTime():
         return null
     global authors
@@ -318,11 +335,13 @@ def getStatForAuthors():
     global totalFilesCount
     # print "hey"
     for author in authors:
+        author['stat']['changedFilesCount'] = len(author['changedFiles'])
+        totalFilesCount = totalFilesCount + author['stat']['changedFilesCount']    
+    for author in authors:
         try:
             author['stat']['commitCount'] = len(author['commit'])
             # author['stat']['commitPercent'] = (1/totalCommits)
             author['stat']['commitPercent'] = (author['stat']['commitCount']/totalCommits)
-            author['stat']['changedFilesCount'] = len(author['changedFiles'])
             author['stat']['changedFilesPercent'] = author['stat']['changedFilesCount']/totalFilesCount
             author['stat']['changedFilesMed'] = median(author['changedFilesCountByCommit'])
             author['stat']['changedFilesAvg'] = author['stat']['changedFilesCount'] / author['stat']['commitCount']
@@ -352,12 +371,12 @@ def printStat():
 def main():
     
     targetIsGit()
-    getTotalFiles()
+    # getTotalFiles()
 
 
     getAuthors()
     getChangedFilesByAuthors()
-    
+    # testing()
     getInactiveAuthorsForSixMonths()
     getChangedFilesTypeByAuthor()
     
@@ -365,6 +384,7 @@ def main():
     getStatForAuthors()
     # # print authors
     printStat()
+    writeTocsv()
     # print totalFilesCount
 # This module is being run standalone.
 if __name__ == "__main__": main()
