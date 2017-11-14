@@ -2,9 +2,13 @@ from __future__ import division
 from subprocess import PIPE, Popen
 import sys
 import numpy as np
+from numpy import median
+import time as sysTime
+import datetime
 targetFolder = "cd ../commons-math/;"
 totalFilesCmd = "find ./ -type f | wc -l"
 authors = []
+authorsInactive = []
 totalCommits = 0
 totalFilesCount = 0
 def cmdline(command):
@@ -97,7 +101,11 @@ def getAuthors():
                     "commitCount":0,
                     "commitPercent":0,
                     "changedFilesCount":0,
-                    "changedFilesPercent":0
+                    "changedFilesPercent":0,
+                    "changedFilesAvg":0,
+                    "changedFilesMed":0,
+                    "latestCommitTime":"",
+                    "latestCommitTimeStamp":""
                     }
         }
         authors.append(newAuthorObj)
@@ -136,6 +144,7 @@ def getChangedFilesByAuthors():
             for commit in author['commit']:
                 if commit == commitName:
                     author['changedFilesCountByCommit'].append(count)
+                    author['changedFilesCountByCommit'].sort()
     cmd = targetFolder + 'git log --branches --name-only --pretty=short --before="2017-11-01"'
     commits = []
     for char in cmdline(cmd):
@@ -168,21 +177,61 @@ def getStatForAuthors():
     global totalFilesCount
     # print "hey"
     for author in authors:
-        author['stat']['commitCount'] = len(author['commit'])
-        # author['stat']['commitPercent'] = (1/totalCommits)
-        author['stat']['commitPercent'] = (author['stat']['commitCount']/totalCommits)
-        author['stat']['changedFilesCount'] = len(author['changedFiles'])
-        author['stat']['changedFilesPercent'] = author['stat']['changedFilesCount']/totalFilesCount
-
+        try:
+            author['stat']['commitCount'] = len(author['commit'])
+            # author['stat']['commitPercent'] = (1/totalCommits)
+            author['stat']['commitPercent'] = (author['stat']['commitCount']/totalCommits)
+            author['stat']['changedFilesCount'] = len(author['changedFiles'])
+            author['stat']['changedFilesPercent'] = author['stat']['changedFilesCount']/totalFilesCount
+            author['stat']['changedFilesMed'] = median(author['changedFilesCountByCommit'])
+            author['stat']['changedFilesAvg'] = author['stat']['changedFilesCount'] / author['stat']['commitCount']
+        except ZeroDivisionError:
+            print "error"
 
     # print authors
+def getInactiveAuthorsForSixMonths():
+    def updateAuthorLatestTime(updateAuthor, updateTime):
+        global authors
+        for author in authors:
+            if author['author'] == updateAuthor:
+                author['stat']['latestCommitTime'] = updateTime
+                author['stat']['latestCommitTimeStamp'] = sysTime.mktime(datetime.datetime.strptime(updateTime, "%Y-%m-%d").timetuple())
+                
+    def getTimeStamp():
+        return null
+    def getInactiveSinceTime():
+        return null
+    global authors
+    cmd = targetFolder + 'git log --before="2017-11-01" --name-status --reverse --date=iso' 
+    commits = []
+    for char in cmdline(cmd):
+        commits.append(char)
+    commits = ''.join(commits).split('commit ')
+    for commit in commits:
+        # print commit.split('\n')
+        # print commit
+        try:    
+            time = find_between( commit, 'Date:' ,':')[3:-3]
+            author = find_between( commit, 'Author:' ,' <' )[1:]
+            if time != '':
+                updateAuthorLatestTime(author, time)
+                # print author
+                # print time
+                # updateAuthorLatestTime( author, time)
+
+                # print commit
+        except IndexError:
+            print "time is error"
+            # print commit
+        # print time[0]
+        # print find_between( commit, 'Date: ',':' )[]
 def printStat():
     global authors
     for author in authors:
         print "Author"
         print author['author']
         print author['stat']
-        print author['changedFiles']
+        # print author['changedFiles']
         print author['changedFilesCountByCommit']
 def main():
     
@@ -191,9 +240,10 @@ def main():
 
 
     getAuthors()
-    authors = getChangedFilesByAuthors()
+    getChangedFilesByAuthors()
     getStatForAuthors()
     
+    getInactiveAuthorsForSixMonths()
     # # print authors
     printStat()
     # print totalFilesCount
