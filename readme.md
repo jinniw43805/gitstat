@@ -1,7 +1,3 @@
-#Gitstat
-
---
-
 # Author
 YenChun Kuo
 
