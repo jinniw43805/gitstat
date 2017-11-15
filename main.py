@@ -28,12 +28,10 @@ def targetIsGit():
     else:
         print("Cannot find git target, exit the program")
         sys.exit();
-    # print subprocess.check_output(cmd,shell = True)
 
 def getAllBranchesName():
     """Return all branches of repository"""
     cmd = targetFolder + 'git branch -a'
-    # print cmdline(cmd)
     branchesName = []
     for char in cmdline(cmd):
         branchesName.append(char)
@@ -69,28 +67,21 @@ def getAuthors():
         # search author object and put into commit name
     # getCommitName()
     authorNames = []
+    emails = []
     commitNames = []
     cmd = targetFolder + 'git log --all --branches --name-only --before="2017-11-1"'
     commits = []
     for char in cmdline(cmd):
         commits.append(char)
     commits = ''.join(commits).split('commit ')
-    # print commits
-    # print find_between( commits[-1], 'Author: ', ' <')
     for author in commits:
-        # print author.index("\n")
-        # commitNames.append( find_between( author, '','\n' ) )       
         authorNames.append( find_between( author, 'Author: ', ' <'))
-    # print commits
-    # print len(list(set(authors)))
-    
     authorNames = list(set(authorNames))
-    
-    
-
+    # emails = list(set(emails))
     for newAuthorName in authorNames:
         newAuthorObj = {
                 "author":newAuthorName,
+                "email":"",
                 "changedFiles":[],
                 "changedFilesCountByCommit":[],
                 "changedFilesTypeCountByCommit":[],
@@ -117,34 +108,22 @@ def getAuthors():
         }
         authors.append(newAuthorObj)
 
-    # print authors
     commitInfo = getCommitName()
     global totalCommits
     for commit in commitInfo:
         for authorObj in authors:
-            # print commit['authorName']
-            # print commit['authorName']
-            # print authorObj['author']
             if commit['authorName'] == authorObj['author']:
                 authorObj['commit'].append(commit['commitName'])
                 totalCommits = (totalCommits + 1)
-                # print "Can not append"
     return authors
 def getChangedFilesByAuthors():
     def storeFilesInAuthors(commitName, FileName):
         global authors
         for author in authors:
-            # print author['author']
             for commit in author['commit']:
-                # print commit
-                # print commitName
                 if commit == commitName:
-                    # print "can add files"
                     author['changedFiles'].append(FileName)
 
-        # for author in authors:
-            # author['changedFiles'] = list(set(author['changedFiles']))
-    
     def storeFilesCountByEachCommitInAuthors(commitName, count):
         global authors
         for author in authors:
@@ -160,21 +139,16 @@ def getChangedFilesByAuthors():
     for commit in commits:
         try:
             if commit.split('\n')[-2] == '' and commit.split('\n')[-1] == '':
-                # print commit.split('\n')
-                # print "Extract files from commit"
                 count = 2
                 changedFilesCount = 0
                 commitName = list(reversed(commit.split('\n')))[-1]
-                # print list(reversed(commit.split('\n')))
                 while list(reversed(commit.split('\n')))[count] != '' and list(reversed(commit.split('\n')))[count][0] != ' ':
                     
-                    # print list(reversed(commit.split('\n')))[count]
                     storeFilesInAuthors(list(reversed(commit.split('\n')))[-1], list(reversed(commit.split('\n')))[count])
                     changedFilesCount = changedFilesCount + 1
                     count = count + 1
                 storeFilesCountByEachCommitInAuthors(list(reversed(commit.split('\n')))[-1], changedFilesCount)
             # else:
-                # print commit.split('\n')[-2]
         except IndexError:
             print len(commit.split('\n'))
     
@@ -197,24 +171,16 @@ def getInactiveAuthorsForSixMonths():
         commits.append(char)
     commits = ''.join(commits).split('commit ')
     for commit in commits:
-        # print commit.split('\n')
-        # print commit
         try:    
             time = find_between( commit, 'Date:' ,':')[3:-3]
             author = find_between( commit, 'Author:' ,' <' )[1:]
             if time != '':
                 updateAuthorLatestTime(author, time)
-                # print author
-                # print time
-                # updateAuthorLatestTime( author, time)
-
-                # print commit
         except IndexError:
             print "time is error"
 def getChangedFilesTypeByAuthor():
     def isFilesLine(line):
         if (line[0] == "D" or line[0] == "M" or line[0]== "A") and line[1] == "\t":
-            # print line
             return True
         else:
             return False
@@ -248,7 +214,6 @@ def getChangedFilesTypeByAuthor():
     for commit in commits:
         # get author name
         authorName = find_between( commit, 'Author:', ' <' )[1:]
-        # print authorName
         typeObj = {
                 "author":authorName,
                 "commit":{
@@ -259,21 +224,16 @@ def getChangedFilesTypeByAuthor():
                 }
         for eachLine in commit.split('\n'):
             try:
-                # print isFilesLine(eachLine)
                 
                 if isFilesLine(eachLine) == True:
-                    # print eachLine
                     fileType = FileType(eachLine)
-                    # print fileType
                     typeObj =storeFilesTypesOfEachCommitInTypeObj(typeObj, fileType)
-                    # print "e"
 
             except IndexError:
                 # ChangeLineSymbol
                 eachLine
-                # print eachLine
+                # print "IndexError"
         storeFilesTypesOfEachCommitInAuthors(authorName, typeObj)
-        # print typeObj
 def getStatForAuthors():
     def getStatM(author):
         mCount = 0
@@ -309,11 +269,8 @@ def getStatForAuthors():
         author['stat']['Dmed'] = median(medArray)
 
         return author
-    
-    # print authors
     global totalCommits
     global totalFilesCount
-    # print "hey"
     for author in authors:
             author['stat']['changedFilesCount'] = len(author['changedFiles'])
             totalFilesCount = totalFilesCount + author['stat']['changedFilesCount']
@@ -335,7 +292,6 @@ def getStatForAuthors():
         except ZeroDivisionError:
             print "error"
 
-    # print authors
 def printStat():
     global authors
     for author in authors:
@@ -343,7 +299,8 @@ def printStat():
         print author['author']
         print author['stat']
         # print author['changedFiles']
-        # print author['changedFilesCountByCommit']
+        print "changedFilesCountByCommit"
+        print author['changedFilesCountByCommit']
         print author['changedFilesTypeCountByCommit']
         # print author['stat']['Mmed']
         # print author['stat']['Amed']
