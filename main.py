@@ -6,28 +6,12 @@ from numpy import median
 import time as sysTime
 import datetime
 import csv
-targetFolder = "cd ~/git/CR-group-1/commons-math/;"
+targetFolder = "cd ../commons-math/;"
 totalFilesCmd = "find ./ -type f | wc -l"
 authors = []
 authorsInactive = []
 totalCommits = 0
 totalFilesCount = 0
-def writeTocsv():
-    with open('result.csv', 'wb') as csvfile:
-        csvwriter = csv.writer(csvfile, dialect='excel')
-        csvwriter.writerow(['Author', '', 'commit', '', 'FileChage'])
-        csvwriter.writerow(['', '#', '%', '#', '%', 'Avg.' ,'Med.'])
-        for author in authors:
-            length = len(author['author'])
-            # csvwriter.set_column(csvwriter.writerow().index,1,len)
-            csvwriter.writerow([author['author'], 
-                author['stat']['commitCount'],
-                author['stat']['commitPercent'],
-                author['stat']['changedFilesCount'],
-                author['stat']['changedFilesPercent'],
-                author['stat']['changedFilesAvg'],
-                author['stat']['changedFilesMed']
-                ])
 def cmdline(command):
     # Init for cmdline operation
     process = Popen(
@@ -36,10 +20,6 @@ def cmdline(command):
             shell = True
             )
     return process.communicate()[0]
-def getTotalFiles():
-    global totalFilesCount
-    cmd = targetFolder + 'find ./ -type f | wc -l'
-    totalFilesCount = int(cmdline(cmd)[4:-1])
 def targetIsGit():
     """Return true if targer folder is git folder, other wise return false"""
     cmd = targetFolder + 'git rev-parse --is-inside-work-tree'
@@ -70,7 +50,7 @@ def find_between( s, first, last ):
         return ""
 def getAuthors():
     def getCommitName():
-        cmd = targetFolder + 'git log --branches --pretty=format:"%H %aN" --before="2017-11-01"'
+        cmd = targetFolder + 'git log --all --branches --pretty=format:"%H %aN" --before="2017-11-01"'
         commits = []
         info = []
         for char in cmdline(cmd):
@@ -90,7 +70,7 @@ def getAuthors():
     # getCommitName()
     authorNames = []
     commitNames = []
-    cmd = targetFolder + 'git log --branches --name-only --before="2017-11-1"'
+    cmd = targetFolder + 'git log --all --branches --name-only --before="2017-11-1"'
     commits = []
     for char in cmdline(cmd):
         commits.append(char)
@@ -172,7 +152,7 @@ def getChangedFilesByAuthors():
                 if commit == commitName:
                     author['changedFilesCountByCommit'].append(count)
                     author['changedFilesCountByCommit'].sort()
-    cmd = targetFolder + 'git log --branches --name-only --pretty=short --before="2017-11-01"'
+    cmd = targetFolder + 'git log --all --branches --name-only --pretty=short --before="2017-11-01"'
     commits = []
     for char in cmdline(cmd):
         commits.append(char)
@@ -211,7 +191,7 @@ def getInactiveAuthorsForSixMonths():
     def getInactiveSinceTime():
         return null
     global authors
-    cmd = targetFolder + 'git log --before="2017-11-01" --name-status --reverse --date=iso' 
+    cmd = targetFolder + 'git log --all --before="2017-11-01" --name-status --reverse --date=iso' 
     commits = []
     for char in cmdline(cmd):
         commits.append(char)
@@ -260,7 +240,7 @@ def getChangedFilesTypeByAuthor():
         return typeObj
         # return True
     
-    cmd = targetFolder + 'git log --before="2017-11-01" --name-status --reverse --date=iso' 
+    cmd = targetFolder + 'git log --all --before="2017-11-01" --name-status --reverse --date=iso' 
     commits = []
     for char in cmdline(cmd):
         commits.append(char)
@@ -335,12 +315,14 @@ def getStatForAuthors():
     global totalFilesCount
     # print "hey"
     for author in authors:
+            author['stat']['changedFilesCount'] = len(author['changedFiles'])
+            totalFilesCount = totalFilesCount + author['stat']['changedFilesCount']
+    for author in authors:
         try:
             author['stat']['commitCount'] = len(author['commit'])
             # author['stat']['commitPercent'] = (1/totalCommits)
             author['stat']['commitPercent'] = (author['stat']['commitCount']/totalCommits)
-            author['stat']['changedFilesCount'] = len(author['changedFiles'])
-            author['stat']['changedFilesPercent'] = author['stat']['changedFilesCount']/totalFilesCount
+            author['stat']['changedFilesPercent'] = author['stat']['changedFilesCount']/ totalFilesCount
             author['stat']['changedFilesMed'] = median(author['changedFilesCountByCommit'])
             author['stat']['changedFilesAvg'] = author['stat']['changedFilesCount'] / author['stat']['commitCount']
 
@@ -366,10 +348,51 @@ def printStat():
         # print author['stat']['Mmed']
         # print author['stat']['Amed']
         # print author['stat']['Dmed']
+
+def writeTocsv():
+    global totalCommits
+    global totalFilesCount
+    with open('result.csv', 'wb') as csvfile:
+        csvwriter = csv.writer(csvfile, dialect='excel')
+        csvwriter.writerow(['Author', 'commit', '', 'FileChange', '', '', '', 'latestCommitTime', 'latestTimeStamp'])
+        csvwriter.writerow(['', '#', '%', '#', '%', 'Avg.' ,'Med.'])
+        for author in authors:
+            length = len(author['author'])
+            # csvwriter.set_column(csvwriter.writerow().index,1,len)
+            csvwriter.writerow([author['author'], 
+            author['stat']['commitCount'],
+            '{:.2%}'.format(author['stat']['commitPercent']),
+            author['stat']['changedFilesCount'],
+            '{:.2%}'.format(author['stat']['changedFilesPercent']),
+            format( author['stat']['changedFilesAvg'], '.2f'),
+            author['stat']['changedFilesMed'],
+            author['stat']['latestCommitTime']
+            ])
+
+        csvwriter.writerow(['totalCommits', totalCommits])
+        csvwriter.writerow(['totalFilesChanged', totalFilesCount])
+        
+def writeTocsv2():
+    global totalCommits
+    global totalFilesCount
+    with open('result2.csv', 'wb') as csvfile:
+        csvwriter = csv.writer(csvfile, dialect='excel')
+        csvwriter.writerow(['Developer','Avg', '', '','Median', '', ''])
+        csvwriter.writerow(['','Added','Modified','Deleted','Added','Modified','Deleted'])
+
+        for author in authors:
+            # csvwriter.set_column(csvwriter.writerow().index,1,len)
+            csvwriter.writerow(
+            [author['author'], 
+            format(author['stat']['Aavg'], '.2f'),
+            format(author['stat']['Mavg'], '.2f'),
+            format(author['stat']['Davg'], '.2f'),
+            author['stat']['Amed'],
+            author['stat']['Mmed'],
+            author['stat']['Dmed']])        
 def main():
     
     targetIsGit()
-    getTotalFiles()
 
 
     getAuthors()
@@ -383,6 +406,7 @@ def main():
     # # print authors
     printStat()
     writeTocsv()
+    writeTocsv2()
     # print totalFilesCount
 # This module is being run standalone.
 if __name__ == "__main__": main()
